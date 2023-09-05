@@ -1,17 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import React, { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import {
-  Text,
-  View,
-  SafeAreaView,
-  Button,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import { Text, View, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { useFonts } from 'expo-font';
 import colors, { returnRGBNumber } from './lib/colors';
+import * as SplashScreen from 'expo-splash-screen';
+import { addScore, getCurrentTotalScore, getScoreTypeRatio, undoLastScore } from './lib/store';
+import { calculatePercentage } from './lib/numbers.utils';
 
 const xdata = Array(20)
   .fill(0)
@@ -20,11 +15,13 @@ const xdata = Array(20)
     type: i % 3 ? 'nagative' : 'positive',
     datetime: new Date('2023-08-01T12:00:00'),
   }));
+SplashScreen.preventAutoHideAsync();
 
 function App() {
-  const [activeMode, setActiveMode] = React.useState<'today' | 'all-time'>('today');
-  const [score, setScore] = React.useState(0);
-  const [percentages, setPercentages] = React.useState({ positive: 0, negative: 0 });
+  const [activeMode, setActiveMode] = useState<'today' | 'all-time'>('today');
+  const [score, setScore] = useState(0);
+  const [scoreData, setScoreData] = useState<number[]>([50, 50]);
+  const [percentages, setPercentages] = useState({ positive: 0, negative: 0 });
   // const data = xdata;
   // useEffect(() => {
   //   if (!data.length) return;
@@ -46,17 +43,54 @@ function App() {
   //   setPercentages({ positive: positivePercentage, negative: negativePercentage });
   // }, [data.length]);
 
-  const handleUndoLastAction = () => {
-    console.log('Undo');
+  const handleUndoLastAction = async () => {
+    const newScore = await undoLastScore();
+    setScoreData(newScore);
   };
 
-  const handleAddAction = (type: 'positive' | 'negative') => {
-    console.log(type);
+  const handleAddAction = async (type: 'positive' | 'negative') => {
+    const newScoreData = await addScore(type === 'positive' ? 1 : -1);
+    setScoreData(newScoreData);
   };
+
+  const [fontsLoaded] = useFonts({
+    Manrope: require('./assets/fonts/manrope.ttf'),
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    (async function funct() {
+      const total = await getCurrentTotalScore();
+      setScore(total);
+
+      const [positive = 0, nagative = 0] = await getScoreTypeRatio();
+
+      let positivePercentage = Math.round(calculatePercentage(positive, positive + nagative));
+      let negativePercentage = Math.round(calculatePercentage(nagative, positive + nagative));
+
+      if (!positivePercentage && !negativePercentage) {
+        positivePercentage = negativePercentage = 50;
+      }
+      setPercentages({
+        positive: positivePercentage,
+        negative: negativePercentage,
+      });
+    })();
+  }, [scoreData]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <SafeAreaView className="bg-dark h-screen">
-      <View className="h-screen flex flex-col relative">
+      <View className="h-screen flex flex-col relative" onLayout={onLayoutRootView}>
         <LinearGradient
           colors={[
             `rgba(${score >= 0 ? colors.positive : colors.negative},0.8)`,
@@ -67,16 +101,24 @@ function App() {
           locations={[0, 0.6]}
           className="absolute w-full h-full top-0 left-0"
         />
-        <View className="h-2/5 py-10 px-6 flex flex-col justify-center ">
+        <View className="h-[30%] py-3 px-6 flex flex-col justify-center ">
           <StatusBar
             backgroundColor={`rgba(${returnRGBNumber(
               score >= 0 ? colors.positive : colors.negative,
             )},0.8)`}
           />
 
-          <Text className="text-7xl text-white ">Hey{'\n'}there</Text>
+          <Text
+            className="text-7xl text-white font-main"
+            style={{
+              fontFamily: 'Manrope',
+              fontWeight: 'bold',
+            }}
+          >
+            Hey{'\n'}there
+          </Text>
         </View>
-        <ScrollView className="py-6 px-6 rounded-t-[70px] w-[106.2%] mx-[6rem]  bg-dark h-3/5 flex flex-col gap-6">
+        <ScrollView className="py-3 px-6 rounded-t-[70px] w-[106.2%] mx-[6rem]  bg-dark h-3/5 flex flex-col gap-6">
           <View className="flex flex-row gap-2">
             <TouchableOpacity
               onPress={() => {
@@ -103,7 +145,9 @@ function App() {
               } rounded-full`}
             >
               <Text
-                className={`text-2xl ${activeMode === 'all-time' ? 'text-white' : 'text-nuetral'}`}
+                className={`text-2xl font-main ${
+                  activeMode === 'all-time' ? 'text-white' : 'text-nuetral'
+                }`}
               >
                 All time
               </Text>
@@ -118,8 +162,9 @@ function App() {
               ]}
               start={[0, 0]}
               end={[1, 0]}
-              locations={[0, (percentages.positive || 1) / 100, (percentages.positive || 1) / 100]}
-              className="absolute w-full h-full top-0 left-0"
+              locations={[0, 0.98, 1]}
+              className=" w-full h-full self-start"
+              style={{ width: `${percentages.positive}%` }}
             />
             <LinearGradient
               colors={[
@@ -129,12 +174,9 @@ function App() {
               ]}
               start={[0, 0]}
               end={[1, 0]}
-              locations={[
-                (percentages.negative || 1) / 100 + 0.02,
-                (percentages.negative || 1) / 100 + 0.02,
-                1,
-              ]}
-              className="absolute w-full h-full top-0 left-0"
+              locations={[0, 0.02, 1]}
+              style={{ width: `${percentages.negative}%` }}
+              className=" w-full h-full self-end"
             />
           </View>
           <View className="flex flex-row gap-1 items-center ">
@@ -145,18 +187,33 @@ function App() {
             >
               <Image source={require('./assets/icons/undo-icon.png')} className="h-8 w-8" />
             </TouchableOpacity>
-            <Text className="text-white text-2xl">-1</Text>
+            <Text className="text-white text-2xl">{scoreData[scoreData.length - 1] || '--'}</Text>
             <Text className="text-nuetral text-2xl">pts</Text>
           </View>
           <View className="flex flex-row justify-between items-center">
             <View className="flex flex-row gap-2">
               <Text className="text-8xl text-white leading-none">{score}</Text>
-              <Text className="text-nuetral text-xl leading-6">
+              <Text className="text-nuetral text-xl leading-6 font-main">
                 testing{'\n'}well then{'\n'}this
               </Text>
             </View>
             <View className="justify-self-center">
-              <Image source={require('./assets/icons/arrow.png')} className="h-14 w-14" />
+              <Image
+                source={require('./assets/icons/arrow.png')}
+                className="h-14 w-14"
+                style={{
+                  transform: [
+                    {
+                      rotate:
+                        percentages.negative > percentages.positive
+                          ? '-135deg'
+                          : percentages.negative < percentages.positive
+                          ? '45deg'
+                          : '-45deg',
+                    },
+                  ],
+                }}
+              />
             </View>
           </View>
           <View className="mt-[30px] self-center flex flex-row justify-center items-stretch">

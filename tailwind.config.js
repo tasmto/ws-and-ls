@@ -10,6 +10,9 @@ module.exports = {
         nuetral: 'rgb(93, 91, 93)',
         light: 'rgb(255, 255, 255)',
       },
+      fonts: {
+        main: ['Manrope'],
+      },
     },
   },
   plugins: [],
