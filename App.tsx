@@ -89,8 +89,8 @@ function App() {
   }
 
   return (
-    <SafeAreaView className="bg-dark h-screen">
-      <View className="h-screen flex flex-col relative" onLayout={onLayoutRootView}>
+    <SafeAreaView className="bg-dark h-full">
+      <View className="h-screen min-h-screen flex flex-col relative" onLayout={onLayoutRootView}>
         <LinearGradient
           colors={[
             `rgba(${score >= 0 ? colors.positive : colors.negative},0.8)`,
@@ -101,7 +101,7 @@ function App() {
           locations={[0, 0.6]}
           className="absolute w-full h-full top-0 left-0"
         />
-        <View className="h-[30%] py-3 px-6 flex flex-col justify-center ">
+        <View className="flex-1 py-3 px-6 flex flex-row items-center justify-between">
           <StatusBar
             backgroundColor={`rgba(${returnRGBNumber(
               score >= 0 ? colors.positive : colors.negative,
@@ -112,27 +112,22 @@ function App() {
             className="text-7xl text-white font-main"
             style={{
               fontFamily: 'Manrope',
-              fontWeight: 'bold',
             }}
           >
             Hey{'\n'}there
           </Text>
-        </View>
-        <ScrollView className="py-3 px-6 rounded-t-[70px] w-[106.2%] mx-[6rem]  bg-dark h-3/5 flex flex-col gap-6">
-          <View className="flex flex-row gap-2">
+          <View className="flex flex-col gap-2">
             <TouchableOpacity
               onPress={() => {
                 setActiveMode('today');
               }}
               activeOpacity={0.5}
-              className={`bg-transparent px-8 py-3 border-2 ${
-                activeMode === 'today' ? 'border-white' : 'border-nuetral'
+              className={`bg-transparent px-8 py-1 border-2 ${
+                activeMode === 'today' ? 'border-white' : 'bg-dark border-dark'
               } rounded-full`}
             >
-              <Text
-                className={`text-2xl ${activeMode === 'today' ? 'text-white' : 'text-nuetral'}`}
-              >
-                Today
+              <Text className={`text-xl ${activeMode === 'today' ? 'text-white' : 'text-nuetral'}`}>
+                T
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -140,19 +135,21 @@ function App() {
                 setActiveMode('all-time');
               }}
               activeOpacity={0.5}
-              className={`bg-transparent px-8 py-3 border-2 ${
-                activeMode === 'all-time' ? 'border-white' : 'border-nuetral'
+              className={`bg-transparent px-8 py-1 border-2 ${
+                activeMode === 'all-time' ? 'border-white' : 'bg-dark border-dark'
               } rounded-full`}
             >
               <Text
-                className={`text-2xl font-main ${
+                className={`text-xl font-main ${
                   activeMode === 'all-time' ? 'text-white' : 'text-nuetral'
                 }`}
               >
-                All time
+                A
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+        <ScrollView className="py-3 px-6 rounded-t-[70px] w-[106.2%] mx-[6rem]  bg-dark max-h-[380px] flex flex-col gap-6">
           <View className="h-10 rounded-3xl flex flex-row overflow-hidden relative">
             <LinearGradient
               colors={[
